@@ -47,7 +47,7 @@ public abstract class AbstractFastlyTask extends Task {
             """
     )
     @NotNull
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> apiToken;
 
     @Schema(
@@ -175,7 +175,7 @@ public abstract class AbstractFastlyTask extends Task {
         if (body == null || body.isBlank()) {
             return Map.of();
         }
-        return MAPPER.readValue(body, new TypeReference<Map<String, String>>() {});
+        return MAPPER.readValue(body, new TypeReference<>() {});
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
