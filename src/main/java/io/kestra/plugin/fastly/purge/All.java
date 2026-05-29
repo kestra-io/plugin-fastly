@@ -46,14 +46,14 @@ import lombok.experimental.SuperBuilder;
 
                 tasks:
                   - id: flush_staging_cache
-                    type: io.kestra.plugin.fastly.purge.PurgeAll
+                    type: io.kestra.plugin.fastly.purge.All
                     apiToken: "{{ secret('FASTLY_STAGING_TOKEN') }}"
                     serviceId: "{{ secret('FASTLY_STAGING_SERVICE_ID') }}"
                 """
         )
     }
 )
-public class PurgeAll extends AbstractFastlyTask implements RunnableTask<PurgeAll.Output> {
+public class All extends AbstractFastlyTask implements RunnableTask<All.Output> {
 
     @Schema(
         title = "Service ID",

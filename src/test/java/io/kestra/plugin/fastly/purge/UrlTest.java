@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @WireMockTest(httpPort = 28200)
 @KestraTest
-class PurgeUrlTest {
+class UrlTest {
 
     @Inject
     RunContextFactory runContextFactory;
@@ -26,9 +26,9 @@ class PurgeUrlTest {
                     """))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrl")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28200"))
             .url(Property.ofValue("https://example.com/"))
@@ -55,9 +55,9 @@ class PurgeUrlTest {
                     """))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrlSoft")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28200"))
             .url(Property.ofValue("https://example.com/page"))
@@ -80,9 +80,9 @@ class PurgeUrlTest {
                     """))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrlEncode")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28200"))
             .url(Property.ofValue("https://example.com/a b/café?x=1"))
@@ -102,9 +102,9 @@ class PurgeUrlTest {
                 .willReturn(aResponse().withStatus(200))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrlEmptyBody")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28200"))
             .url(Property.ofValue("https://example.com/"))
@@ -125,9 +125,9 @@ class PurgeUrlTest {
                     """))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrlTrailingSlash")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28200/"))
             .url(Property.ofValue("https://example.com/"))
@@ -147,9 +147,9 @@ class PurgeUrlTest {
                 .willReturn(aResponse().withStatus(403).withBody("Forbidden"))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrl403")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("bad-token"))
             .baseUrl(Property.ofValue("http://localhost:28200"))
             .url(Property.ofValue("https://example.com/"))
@@ -168,9 +168,9 @@ class PurgeUrlTest {
                 .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
         );
 
-        var task = PurgeUrl.builder()
+        var task = Url.builder()
             .id("purgeUrl500")
-            .type(PurgeUrl.class.getName())
+            .type(Url.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28200"))
             .url(Property.ofValue("https://example.com/"))

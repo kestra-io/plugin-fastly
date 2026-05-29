@@ -26,10 +26,10 @@ Infrastructure dependencies (Docker Compose services):
 ### Key Plugin Classes
 
 - `io.kestra.plugin.fastly.AbstractFastlyTask` — shared base: `apiToken`, `baseUrl`, `fastlyRequest(...)` helper
-- `io.kestra.plugin.fastly.purge.PurgeUrl` — purge a single URL (`POST /purge/{url}`)
-- `io.kestra.plugin.fastly.purge.PurgeKey` — purge a single surrogate key on a service (`POST /service/{id}/purge/{key}`)
-- `io.kestra.plugin.fastly.purge.PurgeKeys` — batch purge surrogate keys (`POST /service/{id}/purge` with JSON body)
-- `io.kestra.plugin.fastly.purge.PurgeAll` — flush entire service cache (`POST /service/{id}/purge_all`, hard-purge only)
+- `io.kestra.plugin.fastly.purge.Url` — purge a single URL (`POST /purge/{url}`)
+- `io.kestra.plugin.fastly.purge.Key` — purge a single surrogate key on a service (`POST /service/{id}/purge/{key}`)
+- `io.kestra.plugin.fastly.purge.Keys` — batch purge surrogate keys (`POST /service/{id}/purge` with JSON body)
+- `io.kestra.plugin.fastly.purge.All` — flush entire service cache (`POST /service/{id}/purge_all`, hard-purge only)
 
 ### Project Structure
 
@@ -39,16 +39,16 @@ plugin-fastly/
 │   ├── AbstractFastlyTask.java
 │   ├── package-info.java
 │   └── purge/
-│       ├── PurgeUrl.java
-│       ├── PurgeKey.java
-│       ├── PurgeKeys.java
-│       ├── PurgeAll.java
+│       ├── Url.java
+│       ├── Key.java
+│       ├── Keys.java
+│       ├── All.java
 │       └── package-info.java
 ├── src/test/java/io/kestra/plugin/fastly/purge/
-│   ├── PurgeUrlTest.java
-│   ├── PurgeKeyTest.java
-│   ├── PurgeKeysTest.java
-│   └── PurgeAllTest.java
+│   ├── UrlTest.java
+│   ├── KeyTest.java
+│   ├── KeysTest.java
+│   └── AllTest.java
 ├── build.gradle
 └── README.md
 ```

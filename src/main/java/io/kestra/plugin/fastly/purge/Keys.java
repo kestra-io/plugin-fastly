@@ -29,7 +29,7 @@ import java.util.Map;
     title = "Batch purge surrogate keys from a Fastly service",
     description = """
         Sends a single API call to purge multiple surrogate keys from a specific Fastly service.
-        Prefer this over calling `PurgeKey` in a loop — it is more efficient and counts as one API call.
+        Prefer this over calling `Key` in a loop — it is more efficient and counts as one API call.
         The response contains a per-key purge ID map for traceability.
         """
 )
@@ -49,7 +49,7 @@ import java.util.Map;
 
                 tasks:
                   - id: purge_articles
-                    type: io.kestra.plugin.fastly.purge.PurgeKeys
+                    type: io.kestra.plugin.fastly.purge.Keys
                     apiToken: "{{ secret('FASTLY_API_TOKEN') }}"
                     serviceId: "{{ secret('FASTLY_SERVICE_ID') }}"
                     surrogateKeys: "{{ inputs.article_ids }}"
@@ -62,7 +62,7 @@ import java.util.Map;
         )
     }
 )
-public class PurgeKeys extends AbstractFastlyTask implements RunnableTask<PurgeKeys.Output> {
+public class Keys extends AbstractFastlyTask implements RunnableTask<Keys.Output> {
 
     @Schema(
         title = "Service ID",

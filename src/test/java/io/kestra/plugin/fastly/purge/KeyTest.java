@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @WireMockTest(httpPort = 28201)
 @KestraTest
-class PurgeKeyTest {
+class KeyTest {
 
     @Inject
     RunContextFactory runContextFactory;
@@ -26,9 +26,9 @@ class PurgeKeyTest {
                     """))
         );
 
-        var task = PurgeKey.builder()
+        var task = Key.builder()
             .id("purgeKey")
-            .type(PurgeKey.class.getName())
+            .type(Key.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28201"))
             .serviceId(Property.ofValue("svc-123"))
@@ -56,9 +56,9 @@ class PurgeKeyTest {
                     """))
         );
 
-        var task = PurgeKey.builder()
+        var task = Key.builder()
             .id("purgeKeySoft")
-            .type(PurgeKey.class.getName())
+            .type(Key.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28201"))
             .serviceId(Property.ofValue("svc-123"))
@@ -82,9 +82,9 @@ class PurgeKeyTest {
                     """))
         );
 
-        var task = PurgeKey.builder()
+        var task = Key.builder()
             .id("purgeKeyEncode")
-            .type(PurgeKey.class.getName())
+            .type(Key.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28201"))
             .serviceId(Property.ofValue("svc-123"))
@@ -104,9 +104,9 @@ class PurgeKeyTest {
                 .willReturn(aResponse().withStatus(403).withBody("Forbidden"))
         );
 
-        var task = PurgeKey.builder()
+        var task = Key.builder()
             .id("purgeKey403")
-            .type(PurgeKey.class.getName())
+            .type(Key.class.getName())
             .apiToken(Property.ofValue("bad-token"))
             .baseUrl(Property.ofValue("http://localhost:28201"))
             .serviceId(Property.ofValue("svc-123"))
@@ -124,9 +124,9 @@ class PurgeKeyTest {
                 .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
         );
 
-        var task = PurgeKey.builder()
+        var task = Key.builder()
             .id("purgeKey500")
-            .type(PurgeKey.class.getName())
+            .type(Key.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28201"))
             .serviceId(Property.ofValue("svc-123"))

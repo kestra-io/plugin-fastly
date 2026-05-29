@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
     title = "Purge a cached URL from Fastly",
     description = """
         Sends a soft or hard purge request for a single URL across all Fastly services that cache it.
-        This operation is not scoped to a specific service. Use `PurgeKey` or `PurgeKeys` for
+        This operation is not scoped to a specific service. Use `Key` or `Keys` for
         service-scoped, surrogate-key-based invalidation.
         """
 )
@@ -46,7 +46,7 @@ import java.nio.charset.StandardCharsets;
                     message: "Static site uploaded to origin"
 
                   - id: purge_homepage
-                    type: io.kestra.plugin.fastly.purge.PurgeUrl
+                    type: io.kestra.plugin.fastly.purge.Url
                     apiToken: "{{ secret('FASTLY_API_TOKEN') }}"
                     url: "https://example.com/"
                     soft: false
@@ -54,7 +54,7 @@ import java.nio.charset.StandardCharsets;
         )
     }
 )
-public class PurgeUrl extends AbstractFastlyTask implements RunnableTask<PurgeUrl.Output> {
+public class Url extends AbstractFastlyTask implements RunnableTask<Url.Output> {
 
     @Schema(
         title = "URL to purge",

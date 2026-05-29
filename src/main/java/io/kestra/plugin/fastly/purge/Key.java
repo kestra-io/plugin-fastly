@@ -26,7 +26,7 @@ import lombok.experimental.SuperBuilder;
     description = """
         Sends a soft or hard purge request for a single surrogate key on a specific Fastly service.
         Surrogate keys are set on responses via the `Surrogate-Key` response header.
-        Use `PurgeKeys` to invalidate multiple keys in a single API call.
+        Use `Keys` to invalidate multiple keys in a single API call.
         """
 )
 @Plugin(
@@ -40,7 +40,7 @@ import lombok.experimental.SuperBuilder;
 
                 tasks:
                   - id: purge_product
-                    type: io.kestra.plugin.fastly.purge.PurgeKey
+                    type: io.kestra.plugin.fastly.purge.Key
                     apiToken: "{{ secret('FASTLY_API_TOKEN') }}"
                     serviceId: "{{ secret('FASTLY_SERVICE_ID') }}"
                     surrogateKey: "product-42"
@@ -49,7 +49,7 @@ import lombok.experimental.SuperBuilder;
         )
     }
 )
-public class PurgeKey extends AbstractFastlyTask implements RunnableTask<PurgeKey.Output> {
+public class Key extends AbstractFastlyTask implements RunnableTask<Key.Output> {
 
     @Schema(
         title = "Service ID",

@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @WireMockTest(httpPort = 28203)
 @KestraTest
-class PurgeAllTest {
+class AllTest {
 
     @Inject
     RunContextFactory runContextFactory;
@@ -26,9 +26,9 @@ class PurgeAllTest {
                     """))
         );
 
-        var task = PurgeAll.builder()
+        var task = All.builder()
             .id("purgeAll")
-            .type(PurgeAll.class.getName())
+            .type(All.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28203"))
             .serviceId(Property.ofValue("svc-789"))
@@ -52,9 +52,9 @@ class PurgeAllTest {
                 .willReturn(aResponse().withStatus(403).withBody("Forbidden"))
         );
 
-        var task = PurgeAll.builder()
+        var task = All.builder()
             .id("purgeAll403")
-            .type(PurgeAll.class.getName())
+            .type(All.class.getName())
             .apiToken(Property.ofValue("bad-token"))
             .baseUrl(Property.ofValue("http://localhost:28203"))
             .serviceId(Property.ofValue("svc-789"))
@@ -73,9 +73,9 @@ class PurgeAllTest {
                 .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
         );
 
-        var task = PurgeAll.builder()
+        var task = All.builder()
             .id("purgeAll500")
-            .type(PurgeAll.class.getName())
+            .type(All.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28203"))
             .serviceId(Property.ofValue("svc-789"))
