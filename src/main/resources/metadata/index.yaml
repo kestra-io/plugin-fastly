@@ -1,7 +1,7 @@
 group: io.kestra.plugin.fastly
 name: "fastly"
 title: "Fastly"
-description: "Task related to Fastly service (Cache purge)"
+description: "Tasks related to Fastly services"
 body: ""
 videos: []
 createdBy: "Kestra Core Team"
