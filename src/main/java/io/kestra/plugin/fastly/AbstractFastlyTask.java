@@ -164,7 +164,4 @@ public abstract class AbstractFastlyTask extends Task {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PurgeResponse(String status, String id) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record StatsEnvelope(String status, Map<String, Object> meta, Object data) {}
 }

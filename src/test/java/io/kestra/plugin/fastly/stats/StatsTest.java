@@ -54,10 +54,13 @@ class StatsTest {
         assertNotNull(output.getMeta());
         assertNotNull(output.getData());
 
+        // F2: per-service response (List) is normalized to {serviceId: [points]} for a uniform shape.
+        var dataMap = output.getData();
+        assertTrue(dataMap.containsKey("svc-abc"), "Expected data keyed by serviceId");
         @SuppressWarnings("unchecked")
-        var dataList = (List<Map<String, Object>>) output.getData();
-        assertEquals(1, dataList.size());
-        assertEquals(10, ((Number) dataList.getFirst().get("requests")).intValue());
+        var points = (List<Map<String, Object>>) dataMap.get("svc-abc");
+        assertEquals(1, points.size());
+        assertEquals(10, ((Number) points.getFirst().get("requests")).intValue());
 
         verify(getRequestedFor(urlPathEqualTo("/stats/service/svc-abc"))
             .withHeader("Fastly-Key", equalTo("test-token"))

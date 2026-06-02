@@ -7,6 +7,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.fastly.AbstractFastlyTask;
+import io.kestra.plugin.fastly.FastlyClient;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -114,13 +115,8 @@ public class AggregateStats extends AbstractFastlyTask implements RunnableTask<A
         return Output.builder()
             .status(envelope.status())
             .meta(envelope.meta())
-            .data(asList(envelope.data()))
+            .data(FastlyClient.asList(envelope.data()))
             .build();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static List<Object> asList(Object obj) {
-        return obj instanceof List<?> ? (List<Object>) obj : null;
     }
 
     @Builder

@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -74,13 +75,19 @@ public final class FastlyClient {
         // Avoid toBuilder().build() on HttpConfiguration: the builder's basicAuthUser/basicAuthPassword
         // setters unconditionally create a BasicAuthConfiguration even when both values are null,
         // which causes the client to emit "Authorization: Basic bnVsbDpudWxs" (base64("null:null"))
-        // and Fastly rejects every request with HTTP 401. Use the direct setter instead.
+        // and Fastly rejects every request with HTTP 401. Do NOT call setAllowFailed — use the
+        // exception thrown by the client when allowFailed is false (the default) to capture non-2xx.
         var config = options != null ? options : HttpConfiguration.builder().build();
-        config.setAllowFailed(Property.ofValue(true));
 
         HttpResponse<String> response;
         try (var client = new HttpClient(runContext, config)) {
-            response = client.request(requestBuilder.build(), String.class);
+            try {
+                response = client.request(requestBuilder.build(), String.class);
+            } catch (HttpClientResponseException e) {
+                @SuppressWarnings("unchecked")
+                var r = (HttpResponse<String>) e.getResponse();
+                response = r;
+            }
         }
 
         if (response.getStatus() == null || response.getStatus().getCode() == 0) {
@@ -92,16 +99,15 @@ public final class FastlyClient {
 
         var statusCode = response.getStatus().getCode();
         if (statusCode < 200 || statusCode >= 300) {
-            var responseBody = response.getBody();
+            runContext.logger().debug("Fastly API error response (HTTP {}): {}", statusCode, response.getBody());
             if (statusCode == 403) {
                 throw new HttpClientResponseException(
-                    "Fastly API returned 403 Forbidden. Verify your API token has the required scope."
-                        + " Response: " + responseBody,
+                    "Fastly API returned 403 Forbidden. Verify your API token has the required scope.",
                     response
                 );
             }
             throw new HttpClientResponseException(
-                "Fastly API request failed (HTTP " + statusCode + "): " + responseBody,
+                "Fastly API request failed (HTTP " + statusCode + ").",
                 response
             );
         }
@@ -134,6 +140,16 @@ public final class FastlyClient {
     /** Strips trailing slash from a base URL string. */
     public static String normalizeBaseUrl(String raw) {
         return raw.endsWith("/") ? raw.substring(0, raw.length() - 1) : raw;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> asMap(Object obj) {
+        return obj instanceof Map<?, ?> ? (Map<String, Object>) obj : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<Object> asList(Object obj) {
+        return obj instanceof List<?> ? (List<Object>) obj : null;
     }
 
     static String buildQueryString(Map<String, String> params) {

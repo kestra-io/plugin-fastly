@@ -50,7 +50,7 @@ class StatsTriggerTest {
             .serviceId(Property.ofValue("svc-test"))
             .field(Property.ofValue("status_5xx"))
             .threshold(Property.ofValue(50.0))
-            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .comparator(Property.ofValue(StatsTrigger.ComparisonOperator.GREATER_THAN))
             .window(Property.ofValue(Duration.ofHours(1)))
             .interval(Duration.ofMinutes(5))
             .build();
@@ -85,7 +85,7 @@ class StatsTriggerTest {
             .serviceId(Property.ofValue("svc-test"))
             .field(Property.ofValue("status_5xx"))
             .threshold(Property.ofValue(50.0))
-            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .comparator(Property.ofValue(StatsTrigger.ComparisonOperator.GREATER_THAN))
             .window(Property.ofValue(Duration.ofHours(1)))
             .interval(Duration.ofMinutes(5))
             .build();
@@ -126,7 +126,7 @@ class StatsTriggerTest {
             .serviceId(Property.ofValue("svc-test"))
             .field(Property.ofValue("status_5xx"))
             .threshold(Property.ofValue(1000.0))
-            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .comparator(Property.ofValue(StatsTrigger.ComparisonOperator.GREATER_THAN))
             .window(Property.ofValue(Duration.ofHours(1)))
             .interval(Duration.ofMinutes(5))
             .build();
@@ -167,7 +167,7 @@ class StatsTriggerTest {
             .serviceId(Property.ofValue("svc-test"))
             .field(Property.ofValue("status_5xx"))
             .threshold(Property.ofValue(100000.0))
-            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .comparator(Property.ofValue(StatsTrigger.ComparisonOperator.GREATER_THAN))
             .window(Property.ofValue(Duration.ofHours(1)))
             .interval(Duration.ofMinutes(5))
             .build();
@@ -205,7 +205,7 @@ class StatsTriggerTest {
             .serviceId(Property.ofValue("svc-test"))
             .field(Property.ofValue("requests"))
             .threshold(Property.ofValue(500.0))
-            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .comparator(Property.ofValue(StatsTrigger.ComparisonOperator.GREATER_THAN))
             .window(Property.ofValue(Duration.ofHours(1)))
             .interval(Duration.ofMinutes(5))
             .build();
@@ -245,7 +245,7 @@ class StatsTriggerTest {
             .serviceId(Property.ofValue("svc-test"))
             .field(Property.ofValue("hit_ratio"))
             .threshold(Property.ofValue(0.9))
-            .comparator(Property.ofValue(StatsTrigger.Comparator.LESS_THAN))
+            .comparator(Property.ofValue(StatsTrigger.ComparisonOperator.LESS_THAN))
             .window(Property.ofValue(Duration.ofMinutes(5)))
             .interval(Duration.ofMinutes(1))
             .build();

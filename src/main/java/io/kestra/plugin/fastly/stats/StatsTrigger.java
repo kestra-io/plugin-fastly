@@ -1,6 +1,5 @@
 package io.kestra.plugin.fastly.stats;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -15,6 +14,7 @@ import io.kestra.core.models.triggers.TriggerOutput;
 import io.kestra.core.models.triggers.TriggerService;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.fastly.FastlyClient;
+import io.kestra.plugin.fastly.StatsEnvelope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -36,7 +36,7 @@ import java.util.Optional;
  * Polls Fastly field stats for a service and fires an execution when the aggregated value
  * of the chosen field crosses a threshold.
  *
- * <p>The field values returned by `/stats/service/{serviceId}/field/{field}` are SUMmed across
+ * <p>The field values returned by {@code /stats/service/{serviceId}/field/{field}} are SUMmed across
  * all data points in the window. This is appropriate for counters (requests, errors, status_5xx)
  * but gives a less intuitive number for ratio fields like {@code hit_ratio}. For ratios,
  * prefer a small {@code window} (e.g. {@code PT5M}) so that only one or a few points are summed.
@@ -145,7 +145,7 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
     @NotNull
     @Builder.Default
     @PluginProperty(group = "main")
-    private Property<Comparator> comparator = Property.ofValue(Comparator.GREATER_THAN);
+    private Property<ComparisonOperator> comparator = Property.ofValue(ComparisonOperator.GREATER_THAN);
 
     @Schema(
         title = "Observation window",
@@ -155,6 +155,19 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
     @Builder.Default
     @PluginProperty(group = "processing")
     private Property<Duration> window = Property.ofValue(Duration.ofHours(1));
+
+    @Schema(
+        title = "Aggregation granularity",
+        description = """
+            Time bucket size for the data points fetched from Fastly. One of `minute`, `hour`, or `day`.
+            Defaults to `minute`. Note that the Fastly API returns at most 200 data points per request;
+            a large `window` combined with fine granularity (e.g. a 4-hour window with `minute` buckets)
+            will exceed this cap and truncate the observed window. Choose `by` to stay within 200 points.
+            """
+    )
+    @Builder.Default
+    @PluginProperty(group = "processing")
+    private Property<String> by = Property.ofValue("minute");
 
     @Schema(
         title = "Interval between polling.",
@@ -183,9 +196,10 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
         var rField = FastlyClient.renderRequired(runContext, field, "field");
         var rThreshold = runContext.render(threshold).as(Double.class)
             .orElseThrow(() -> new IllegalArgumentException("threshold is required"));
-        var rComparator = runContext.render(comparator).as(Comparator.class)
-            .orElse(Comparator.GREATER_THAN);
+        var rComparator = runContext.render(comparator).as(ComparisonOperator.class)
+            .orElse(ComparisonOperator.GREATER_THAN);
         var rWindow = runContext.render(window).as(Duration.class).orElse(Duration.ofHours(1));
+        var rBy = runContext.render(by).as(String.class).orElse("minute");
 
         var now = Instant.now();
         var fromEpoch = String.valueOf(now.minus(rWindow).getEpochSecond());
@@ -196,7 +210,7 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
         Map<String, String> query = new LinkedHashMap<>();
         query.put("from", fromEpoch);
         query.put("to", toEpoch);
-        query.put("by", "minute");
+        query.put("by", rBy);
 
         logger.debug("Polling Fastly field '{}' for service '{}' (window={})", rField, rServiceId, rWindow);
 
@@ -206,11 +220,13 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
             );
 
             var observed = sumField(response.getBody(), rServiceId, rField);
-            logger.info("Fastly field '{}' observed={} threshold={} comparator={}", rField, observed, rThreshold, rComparator);
+            logger.debug("Fastly field '{}' observed={} threshold={} comparator={}", rField, observed, rThreshold, rComparator);
 
             if (!matches(observed, rThreshold, rComparator)) {
                 return Optional.empty();
             }
+
+            logger.info("Fastly field '{}' threshold crossed: observed={} {} {}", rField, observed, rComparator, rThreshold);
 
             var output = Output.builder()
                 .value(observed)
@@ -237,8 +253,8 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
         if (body == null || body.isBlank()) {
             return 0.0;
         }
-        var envelope = FastlyClient.MAPPER.readValue(body, new TypeReference<Map<String, Object>>() {});
-        var rawData = envelope.get("data");
+        var envelope = FastlyClient.MAPPER.readValue(body, StatsEnvelope.class);
+        var rawData = envelope.data();
 
         // Primary shape: data is a flat array of datapoint objects.
         if (rawData instanceof List<?> pointList) {
@@ -269,7 +285,7 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
         return sum;
     }
 
-    private static boolean matches(double observed, double threshold, Comparator comparator) {
+    private static boolean matches(double observed, double threshold, ComparisonOperator comparator) {
         return switch (comparator) {
             case GREATER_THAN -> observed > threshold;
             case GREATER_THAN_OR_EQUAL -> observed >= threshold;
@@ -279,7 +295,7 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
         };
     }
 
-    public enum Comparator {
+    public enum ComparisonOperator {
         GREATER_THAN,
         GREATER_THAN_OR_EQUAL,
         LESS_THAN,

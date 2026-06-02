@@ -7,6 +7,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.fastly.AbstractFastlyTask;
+import io.kestra.plugin.fastly.FastlyClient;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -59,13 +60,8 @@ public class MonthToDateUsage extends AbstractFastlyTask implements RunnableTask
         return Output.builder()
             .status(envelope.status())
             .meta(envelope.meta())
-            .data(asMap(envelope.data()))
+            .data(FastlyClient.asMap(envelope.data()))
             .build();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> asMap(Object obj) {
-        return obj instanceof Map<?, ?> ? (Map<String, Object>) obj : null;
     }
 
     @Builder

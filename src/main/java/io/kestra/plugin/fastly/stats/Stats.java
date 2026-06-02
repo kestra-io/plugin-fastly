@@ -7,6 +7,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.fastly.AbstractFastlyTask;
+import io.kestra.plugin.fastly.FastlyClient;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -16,6 +17,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -177,10 +179,26 @@ public class Stats extends AbstractFastlyTask implements RunnableTask<Stats.Outp
         var response = fastlyGet(runContext, path, query);
         var envelope = readStatsEnvelope(response);
 
+        Map<String, Object> data;
+        if (rServiceId != null && !rServiceId.isBlank()) {
+            // Per-service endpoint returns data as a flat List; normalize to {serviceId: [points]}.
+            var raw = envelope.data();
+            if (raw instanceof List<?>) {
+                data = Map.of(rServiceId, raw);
+            } else {
+                data = FastlyClient.asMap(raw);
+            }
+        } else {
+            data = FastlyClient.asMap(envelope.data());
+        }
+        if (data == null) {
+            data = Map.of();
+        }
+
         return Output.builder()
             .status(envelope.status())
             .meta(envelope.meta())
-            .data(envelope.data())
+            .data(data)
             .build();
     }
 
@@ -203,12 +221,12 @@ public class Stats extends AbstractFastlyTask implements RunnableTask<Stats.Outp
         @Schema(
             title = "Stats data",
             description = """
-                Analytics data returned by Fastly. Shape depends on the request:
-                when `serviceId` is set (`/stats/service/{id}`), `data` is a **List** of
-                time-bucketed datapoint objects; when `serviceId` is omitted (`/stats`),
-                `data` is a **Map** keyed by service id, each value being a list of datapoints.
+                Analytics data keyed by service id. Each value is the list of time-bucketed
+                datapoint objects for that service. When `serviceId` is set, the single-service
+                datapoint array is returned under that service's id so both single-service and
+                all-services responses share the same uniform shape.
                 """
         )
-        private final Object data;
+        private final Map<String, Object> data;
     }
 }
