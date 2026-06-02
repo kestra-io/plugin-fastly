@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,7 +21,9 @@ class StatsTest {
     RunContextFactory runContextFactory;
 
     @Test
-    void happyPath_withServiceId() throws Exception {
+    void happyPath_withServiceId_dataIsArray() throws Exception {
+        // Per-service endpoint returns data as a JSON array of time-bucketed datapoints.
+        // Previously the Map-typed Output.data field silently dropped this, yielding null.
         stubFor(
             get(urlPathEqualTo("/stats/service/svc-abc"))
                 .willReturn(okJson("""
@@ -28,13 +31,13 @@ class StatsTest {
                       "status": "ok",
                       "meta": {"from": 1000, "to": 2000, "by": "hour"},
                       "msg": null,
-                      "data": {"svc-abc": [{"requests": 42, "hit_ratio": 0.91}]}
+                      "data": [{"start_time": 1000, "requests": 10, "hits": 8, "hit_ratio": 0.8}]
                     }
                     """))
         );
 
         var task = Stats.builder()
-            .id("statsWithService")
+            .id("statsWithServiceArray")
             .type(Stats.class.getName())
             .apiToken(Property.ofValue("test-token"))
             .baseUrl(Property.ofValue("http://localhost:28301"))
@@ -51,11 +54,56 @@ class StatsTest {
         assertNotNull(output.getMeta());
         assertNotNull(output.getData());
 
+        @SuppressWarnings("unchecked")
+        var dataList = (List<Map<String, Object>>) output.getData();
+        assertEquals(1, dataList.size());
+        assertEquals(10, ((Number) dataList.getFirst().get("requests")).intValue());
+
         verify(getRequestedFor(urlPathEqualTo("/stats/service/svc-abc"))
             .withHeader("Fastly-Key", equalTo("test-token"))
+            .withoutHeader("Authorization")
             .withQueryParam("from", equalTo("1 hour ago"))
             .withQueryParam("to", equalTo("now"))
             .withQueryParam("by", equalTo("hour")));
+    }
+
+    @Test
+    void happyPath_allServices_dataIsMap() throws Exception {
+        // All-services endpoint returns data as a JSON object keyed by service id.
+        stubFor(
+            get(urlPathEqualTo("/stats"))
+                .willReturn(okJson("""
+                    {
+                      "status": "ok",
+                      "meta": {"from": 1000, "to": 2000, "by": "day"},
+                      "msg": null,
+                      "data": {"svc-xyz": [{"requests": 55}]}
+                    }
+                    """))
+        );
+
+        var task = Stats.builder()
+            .id("statsAllServicesMap")
+            .type(Stats.class.getName())
+            .apiToken(Property.ofValue("test-token"))
+            .baseUrl(Property.ofValue("http://localhost:28301"))
+            .from(Property.ofValue("yesterday"))
+            .to(Property.ofValue("now"))
+            .by(Property.ofValue("day"))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertNotNull(output);
+        assertEquals("ok", output.getStatus());
+        assertNotNull(output.getData());
+
+        @SuppressWarnings("unchecked")
+        var dataMap = (Map<String, Object>) output.getData();
+        assertTrue(dataMap.containsKey("svc-xyz"));
+
+        verify(getRequestedFor(urlPathEqualTo("/stats"))
+            .withHeader("Fastly-Key", equalTo("test-token")));
     }
 
     @Test
@@ -117,6 +165,32 @@ class StatsTest {
 
         verify(getRequestedFor(urlPathEqualTo("/stats"))
             .withQueryParam("services", equalTo("svc-abc,svc-def")));
+    }
+
+    @Test
+    void noAuthorizationHeaderEmitted_regression() throws Exception {
+        // Regression: FastlyClient.request() previously called config.toBuilder().build() which
+        // materialized a BasicAuthConfiguration(null, null) → "Authorization: Basic bnVsbDpudWxs".
+        // Fastly rejected every request with 401 regardless of a valid Fastly-Key token.
+        stubFor(
+            get(urlPathMatching("/stats.*"))
+                .willReturn(okJson("""
+                    {"status":"ok","meta":{},"msg":null,"data":{}}
+                    """))
+        );
+
+        var task = Stats.builder()
+            .id("statsNoAuthHeader")
+            .type(Stats.class.getName())
+            .apiToken(Property.ofValue("valid-token"))
+            .baseUrl(Property.ofValue("http://localhost:28301"))
+            .build();
+
+        task.run(runContextFactory.of());
+
+        verify(getRequestedFor(urlPathMatching("/stats.*"))
+            .withHeader("Fastly-Key", equalTo("valid-token"))
+            .withoutHeader("Authorization"));
     }
 
     @Test

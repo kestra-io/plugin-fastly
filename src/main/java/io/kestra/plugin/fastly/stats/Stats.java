@@ -180,13 +180,8 @@ public class Stats extends AbstractFastlyTask implements RunnableTask<Stats.Outp
         return Output.builder()
             .status(envelope.status())
             .meta(envelope.meta())
-            .data(asMap(envelope.data()))
+            .data(envelope.data())
             .build();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> asMap(Object obj) {
-        return obj instanceof Map<?, ?> ? (Map<String, Object>) obj : null;
     }
 
     @Builder
@@ -208,11 +203,12 @@ public class Stats extends AbstractFastlyTask implements RunnableTask<Stats.Outp
         @Schema(
             title = "Stats data",
             description = """
-                Analytics data returned by Fastly. Shape varies by endpoint:
-                `/stats/service/{id}` returns an object keyed by service ID (each value an array of
-                time-bucketed data points); `/stats` returns an object keyed by service ID across all services.
+                Analytics data returned by Fastly. Shape depends on the request:
+                when `serviceId` is set (`/stats/service/{id}`), `data` is a **List** of
+                time-bucketed datapoint objects; when `serviceId` is omitted (`/stats`),
+                `data` is a **Map** keyed by service id, each value being a list of datapoints.
                 """
         )
-        private final Map<String, Object> data;
+        private final Object data;
     }
 }

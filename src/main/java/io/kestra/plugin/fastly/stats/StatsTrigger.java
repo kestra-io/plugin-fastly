@@ -225,9 +225,13 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
     }
 
     /**
-     * Sums the numeric values of {@code fieldName} across all data points returned for
-     * {@code serviceId}. The stats response shape for this endpoint is:
-     * {@code {"status":"ok","meta":{...},"data":{"<serviceId>":[{"fieldName":N,...},...]}}}.
+     * Sums the numeric values of {@code fieldName} across all data points returned by
+     * {@code GET /stats/service/{serviceId}/field/{field}}.
+     *
+     * <p>The real Fastly endpoint returns {@code "data"} as a flat JSON array of datapoint
+     * objects, e.g. {@code "data":[{"start_time":...,"requests":120,...}, ...]}.
+     * A defensive fallback also handles the legacy map-keyed shape
+     * {@code "data":{"<serviceId>":[...]}} in case it is ever encountered.
      */
     private static double sumField(String body, String serviceId, String fieldName) throws Exception {
         if (body == null || body.isBlank()) {
@@ -235,13 +239,24 @@ public class StatsTrigger extends AbstractTrigger implements PollingTriggerInter
         }
         var envelope = FastlyClient.MAPPER.readValue(body, new TypeReference<Map<String, Object>>() {});
         var rawData = envelope.get("data");
-        if (!(rawData instanceof Map<?, ?> dataMap)) {
-            return 0.0;
+
+        // Primary shape: data is a flat array of datapoint objects.
+        if (rawData instanceof List<?> pointList) {
+            return sumPointList(pointList, fieldName);
         }
-        var points = dataMap.get(serviceId);
-        if (!(points instanceof List<?> pointList)) {
-            return 0.0;
+
+        // Fallback shape: data is a map keyed by serviceId, each value is a list of points.
+        if (rawData instanceof Map<?, ?> dataMap) {
+            var points = dataMap.get(serviceId);
+            if (points instanceof List<?> pointList) {
+                return sumPointList(pointList, fieldName);
+            }
         }
+
+        return 0.0;
+    }
+
+    private static double sumPointList(List<?> pointList, String fieldName) {
         double sum = 0.0;
         for (var point : pointList) {
             if (point instanceof Map<?, ?> pointMap) {

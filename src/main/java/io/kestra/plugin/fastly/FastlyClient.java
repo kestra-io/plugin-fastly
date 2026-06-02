@@ -71,8 +71,12 @@ public final class FastlyClient {
             requestBuilder.body(body);
         }
 
+        // Avoid toBuilder().build() on HttpConfiguration: the builder's basicAuthUser/basicAuthPassword
+        // setters unconditionally create a BasicAuthConfiguration even when both values are null,
+        // which causes the client to emit "Authorization: Basic bnVsbDpudWxs" (base64("null:null"))
+        // and Fastly rejects every request with HTTP 401. Use the direct setter instead.
         var config = options != null ? options : HttpConfiguration.builder().build();
-        config = config.toBuilder().allowFailed(Property.ofValue(true)).build();
+        config.setAllowFailed(Property.ofValue(true));
 
         HttpResponse<String> response;
         try (var client = new HttpClient(runContext, config)) {

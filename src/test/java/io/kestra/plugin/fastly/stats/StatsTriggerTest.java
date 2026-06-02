@@ -96,6 +96,127 @@ class StatsTriggerTest {
         assertFalse(result.isPresent(), "Expected no execution when observed value is below threshold");
     }
 
+    // --- Regression tests for the real Fastly array-shaped response ---
+    // The live endpoint returns "data" as a JSON array, not a map keyed by serviceId.
+    // The old Map-only parsing always returned 0.0, making the trigger non-functional.
+
+    @Test
+    void arrayShape_thresholdCrossed_returnsExecution() throws Exception {
+        // 600 + 700 = 1300, threshold = 1000, GREATER_THAN -> must fire
+        stubFor(
+            get(urlPathEqualTo("/stats/service/svc-test/field/status_5xx"))
+                .willReturn(okJson("""
+                    {
+                      "status": "success",
+                      "meta": {},
+                      "msg": null,
+                      "data": [
+                        {"start_time": 1712001600, "service_id": "svc-test", "status_5xx": 600},
+                        {"start_time": 1712005200, "service_id": "svc-test", "status_5xx": 700}
+                      ]
+                    }
+                    """))
+        );
+
+        var trigger = StatsTrigger.builder()
+            .id("arrayShapeAlert")
+            .type(StatsTrigger.class.getName())
+            .apiToken(Property.ofValue("test-token"))
+            .baseUrl(Property.ofValue("http://localhost:28305"))
+            .serviceId(Property.ofValue("svc-test"))
+            .field(Property.ofValue("status_5xx"))
+            .threshold(Property.ofValue(1000.0))
+            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .window(Property.ofValue(Duration.ofHours(1)))
+            .interval(Duration.ofMinutes(5))
+            .build();
+
+        var mockEntry = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var result = trigger.evaluate(mockEntry.getKey(), mockEntry.getValue());
+
+        assertTrue(result.isPresent(), "Expected execution to fire when array-shape sum (1300) exceeds threshold (1000)");
+        var vars = result.get().getTrigger().getVariables();
+        assertEquals(1300.0, ((Number) vars.get("value")).doubleValue(), 0.0001);
+        assertEquals("status_5xx", vars.get("field"));
+        assertEquals(1000.0, ((Number) vars.get("threshold")).doubleValue(), 0.0001);
+    }
+
+    @Test
+    void arrayShape_belowThreshold_returnsEmpty() throws Exception {
+        // 600 + 700 = 1300, threshold = 100000, GREATER_THAN -> must not fire
+        stubFor(
+            get(urlPathEqualTo("/stats/service/svc-test/field/status_5xx"))
+                .willReturn(okJson("""
+                    {
+                      "status": "success",
+                      "meta": {},
+                      "msg": null,
+                      "data": [
+                        {"start_time": 1712001600, "service_id": "svc-test", "status_5xx": 600},
+                        {"start_time": 1712005200, "service_id": "svc-test", "status_5xx": 700}
+                      ]
+                    }
+                    """))
+        );
+
+        var trigger = StatsTrigger.builder()
+            .id("arrayShapeAlertHigh")
+            .type(StatsTrigger.class.getName())
+            .apiToken(Property.ofValue("test-token"))
+            .baseUrl(Property.ofValue("http://localhost:28305"))
+            .serviceId(Property.ofValue("svc-test"))
+            .field(Property.ofValue("status_5xx"))
+            .threshold(Property.ofValue(100000.0))
+            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .window(Property.ofValue(Duration.ofHours(1)))
+            .interval(Duration.ofMinutes(5))
+            .build();
+
+        var mockEntry = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var result = trigger.evaluate(mockEntry.getKey(), mockEntry.getValue());
+
+        assertFalse(result.isPresent(), "Expected no execution when array-shape sum (1300) is below threshold (100000)");
+    }
+
+    @Test
+    void arrayShape_thirdDatapoint_summedCorrectly() throws Exception {
+        // 100 + 200 + 300 = 600, threshold = 500, GREATER_THAN -> fires
+        stubFor(
+            get(urlPathEqualTo("/stats/service/svc-test/field/requests"))
+                .willReturn(okJson("""
+                    {
+                      "status": "success",
+                      "meta": {},
+                      "msg": null,
+                      "data": [
+                        {"start_time": 1712001600, "requests": 100},
+                        {"start_time": 1712005200, "requests": 200},
+                        {"start_time": 1712008800, "requests": 300}
+                      ]
+                    }
+                    """))
+        );
+
+        var trigger = StatsTrigger.builder()
+            .id("arrayShape3Points")
+            .type(StatsTrigger.class.getName())
+            .apiToken(Property.ofValue("test-token"))
+            .baseUrl(Property.ofValue("http://localhost:28305"))
+            .serviceId(Property.ofValue("svc-test"))
+            .field(Property.ofValue("requests"))
+            .threshold(Property.ofValue(500.0))
+            .comparator(Property.ofValue(StatsTrigger.Comparator.GREATER_THAN))
+            .window(Property.ofValue(Duration.ofHours(1)))
+            .interval(Duration.ofMinutes(5))
+            .build();
+
+        var mockEntry = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var result = trigger.evaluate(mockEntry.getKey(), mockEntry.getValue());
+
+        assertTrue(result.isPresent(), "Expected execution when 3-point array sum (600) exceeds threshold (500)");
+        assertEquals(600.0, ((Number) result.get().getTrigger().getVariables().get("value")).doubleValue(), 0.0001);
+    }
+
     @Test
     void lessThan_comparator_firesWhenBelow() throws Exception {
         // 0.5 + 0.3 = 0.8, threshold = 0.9, LESS_THAN -> fires
