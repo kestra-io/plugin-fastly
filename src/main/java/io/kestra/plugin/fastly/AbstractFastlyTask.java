@@ -6,15 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
-import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.HttpClientException;
-import io.kestra.core.http.client.HttpClientResponseException;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.JacksonMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -25,8 +22,6 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @SuperBuilder
@@ -36,14 +31,14 @@ import java.util.Map;
 @NoArgsConstructor
 public abstract class AbstractFastlyTask extends Task {
 
-    protected static final ObjectMapper MAPPER = JacksonMapper.ofJson(false);
+    protected static final ObjectMapper MAPPER = FastlyClient.MAPPER;
 
     @Schema(
         title = "Fastly API token",
         description = """
             Your Fastly API token. Create one in the Fastly console under Account > API tokens.
             Required scopes depend on the operation: URL and surrogate key purges require `purge_select`;
-            purge-all requires `purge_all`.
+            purge-all requires `purge_all`; stats endpoints require `global:read`.
             """
     )
     @NotNull
@@ -76,71 +71,50 @@ public abstract class AbstractFastlyTask extends Task {
         boolean softPurge,
         HttpRequest.RequestBody body
     ) throws IllegalVariableEvaluationException, HttpClientException {
-        var rToken = runContext.render(apiToken).as(String.class).orElse(null);
-        if (rToken == null || rToken.isBlank()) {
-            throw new IllegalArgumentException("Fastly API token is required but was blank after rendering.");
-        }
+        var rToken = renderToken(runContext);
+        var rBaseUrl = renderBaseUrl(runContext);
 
-        var rBaseUrl = runContext.render(baseUrl).as(String.class)
-            .filter(s -> !s.isBlank())
-            .orElseThrow(() -> new IllegalArgumentException("Fastly API base URL is required but was blank after rendering."));
-        if (rBaseUrl.endsWith("/")) {
-            rBaseUrl = rBaseUrl.substring(0, rBaseUrl.length() - 1);
-        }
-
-        var requestBuilder = HttpRequest.builder()
-            .method("POST")
-            .uri(java.net.URI.create(rBaseUrl + path))
-            .addHeader("Fastly-Key", rToken)
-            .addHeader("Accept", "application/json");
-
-        if (softPurge) {
-            requestBuilder.addHeader("Fastly-Soft-Purge", "1");
-        }
-
-        if (body != null) {
-            requestBuilder.body(body);
-        }
-
-        var request = requestBuilder.build();
-
-        var config = options != null ? options : HttpConfiguration.builder().build();
-        config = config.toBuilder().allowFailed(Property.ofValue(true)).build();
-
-        HttpResponse<String> response;
-        try (var client = new HttpClient(runContext, config)) {
-            response = client.request(request, String.class);
+        var extraHeaders = softPurge ? Map.of("Fastly-Soft-Purge", "1") : Map.<String, String>of();
+        try {
+            return FastlyClient.request(runContext, rToken, rBaseUrl, options, "POST", path, null, extraHeaders, body);
         } catch (IOException e) {
             throw new RuntimeException("Failed to call Fastly API", e);
         }
+    }
 
-        if (response.getStatus() == null || response.getStatus().getCode() == 0) {
-            throw new HttpClientResponseException(
-                "No response received from the Fastly API (possible connectivity, DNS, or timeout issue).",
-                response
-            );
+    /**
+     * Executes a GET request against the Fastly API with optional query parameters.
+     */
+    protected HttpResponse<String> fastlyGet(
+        RunContext runContext,
+        String path,
+        Map<String, String> query
+    ) throws IllegalVariableEvaluationException, HttpClientException {
+        var rToken = renderToken(runContext);
+        var rBaseUrl = renderBaseUrl(runContext);
+        try {
+            return FastlyClient.request(runContext, rToken, rBaseUrl, options, "GET", path, query, null, null);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to call Fastly API", e);
         }
+    }
 
-        var statusCode = response.getStatus().getCode();
-        if (statusCode < 200 || statusCode >= 300) {
-            var responseBody = response.getBody();
-            if (statusCode == 403) {
-                throw new HttpClientResponseException(
-                    "Fastly API returned 403 Forbidden. Verify your API token has the required scope (purge_select or purge_all)."
-                        + " Response: " + responseBody,
-                    response
-                );
-            }
-            throw new HttpClientResponseException(
-                "Fastly API request failed (HTTP " + statusCode + "): " + responseBody,
-                response
-            );
+    /**
+     * Parses the standard Fastly stats response envelope {@code {status, meta, data}},
+     * tolerating an empty body. The {@code data} field may be a Map or List depending
+     * on the endpoint; it is returned as {@code Object} and will be a {@code Map} or
+     * {@code List} at runtime.
+     */
+    protected StatsEnvelope readStatsEnvelope(HttpResponse<String> response) throws IOException {
+        var body = response.getBody();
+        if (body == null || body.isBlank()) {
+            return new StatsEnvelope(null, null, null);
         }
-        return response;
+        return MAPPER.readValue(body, StatsEnvelope.class);
     }
 
     protected static String encodePathSegment(String segment) {
-        return URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20");
+        return FastlyClient.encodePathSegment(segment);
     }
 
     /**
@@ -149,9 +123,7 @@ public abstract class AbstractFastlyTask extends Task {
      */
     protected String renderRequired(RunContext runContext, Property<String> property, String name)
         throws IllegalVariableEvaluationException {
-        return runContext.render(property).as(String.class)
-            .filter(value -> !value.isBlank())
-            .orElseThrow(() -> new IllegalArgumentException(name + " is required"));
+        return FastlyClient.renderRequired(runContext, property, name);
     }
 
     /**
@@ -178,6 +150,21 @@ public abstract class AbstractFastlyTask extends Task {
         return MAPPER.readValue(body, new TypeReference<>() {});
     }
 
+    private String renderToken(RunContext runContext) throws IllegalVariableEvaluationException {
+        var rToken = runContext.render(apiToken).as(String.class).orElse(null);
+        if (rToken == null || rToken.isBlank()) {
+            throw new IllegalArgumentException("Fastly API token is required but was blank after rendering.");
+        }
+        return rToken;
+    }
+
+    private String renderBaseUrl(RunContext runContext) throws IllegalVariableEvaluationException {
+        return FastlyClient.renderBaseUrl(runContext, baseUrl);
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PurgeResponse(String status, String id) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record StatsEnvelope(String status, Map<String, Object> meta, Object data) {}
 }
