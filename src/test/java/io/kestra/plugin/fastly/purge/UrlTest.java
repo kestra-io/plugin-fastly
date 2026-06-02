@@ -43,6 +43,7 @@ class UrlTest {
 
         verify(postRequestedFor(urlPathMatching("/purge/https://example.com/"))
             .withHeader("Fastly-Key", equalTo("test-token"))
+            .withoutHeader("Authorization")
             .withoutHeader("Fastly-Soft-Purge"));
     }
 
@@ -138,6 +139,33 @@ class UrlTest {
         assertEquals("ok", output.getStatus());
 
         verify(postRequestedFor(urlPathMatching("/purge/https://example.com/")));
+    }
+
+    @Test
+    void noAuthorizationHeaderEmitted_regression() throws Exception {
+        // Regression: FastlyClient.request() previously called config.toBuilder().build() which
+        // materialized a BasicAuthConfiguration(null, null) → "Authorization: Basic bnVsbDpudWxs".
+        // Fastly rejected every request with 401 regardless of a valid Fastly-Key token.
+        stubFor(
+            post(urlPathMatching("/purge/.*"))
+                .willReturn(okJson("""
+                    {"status":"ok","id":"req-regression-001"}
+                    """))
+        );
+
+        var task = Url.builder()
+            .id("purgeUrlNoAuth")
+            .type(Url.class.getName())
+            .apiToken(Property.ofValue("valid-token"))
+            .baseUrl(Property.ofValue("http://localhost:28200"))
+            .url(Property.ofValue("https://example.com/regression"))
+            .build();
+
+        task.run(runContextFactory.of());
+
+        verify(postRequestedFor(urlPathMatching("/purge/.*"))
+            .withHeader("Fastly-Key", equalTo("valid-token"))
+            .withoutHeader("Authorization"));
     }
 
     @Test

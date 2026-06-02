@@ -1,0 +1,8 @@
+group: io.kestra.plugin.fastly.stats
+name: "stats"
+title: "Fastly Stats"
+description: "Tasks that pull historical Fastly analytics: requests, bandwidth, cache hit/miss, hit ratio, status codes, and usage breakdowns."
+body: "Query historical Fastly analytics at any granularity. Supports per-service stats, account-wide aggregates, bandwidth and request usage by region or service, month-to-date totals, and a polling trigger that fires when a chosen field metric crosses a configured threshold."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
