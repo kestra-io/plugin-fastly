@@ -3,13 +3,12 @@
 ## What
 
 - Provides plugin components under `io.kestra.plugin.fastly`.
-- Includes classes such as `Example`, `Trigger`.
+- Implements cache invalidation tasks for the Fastly CDN API.
 
 ## Why
 
-- What user problem does this solve? Teams need a concrete starting point for building and validating new Kestra plugins without recreating the same project scaffolding from scratch.
-- Why would a team adopt this plugin in a workflow? It gives plugin authors a ready-made reference repo they can adapt alongside their own build, test, and publishing workflow.
-- What operational/business outcome does it enable? It shortens plugin delivery time, reduces setup mistakes, and makes internal or partner plugin development more repeatable.
+- Enables Kestra workflows to invalidate Fastly-cached content as a declarative task step, replacing ad-hoc `curl`/Python workarounds.
+- Centralises API token handling, error surfacing, and surrogate-key conventions across all purge operations.
 
 ## How
 
@@ -17,7 +16,8 @@
 
 Single-module plugin. Source packages under `io.kestra.plugin`:
 
-- `fastly`
+- `fastly` — root package; contains `AbstractFastlyTask` (shared HTTP base)
+- `fastly.purge` — cache invalidation tasks
 
 Infrastructure dependencies (Docker Compose services):
 
@@ -25,14 +25,30 @@ Infrastructure dependencies (Docker Compose services):
 
 ### Key Plugin Classes
 
-- `io.kestra.plugin.fastly.Example`
+- `io.kestra.plugin.fastly.AbstractFastlyTask` — shared base: `apiToken`, `baseUrl`, `fastlyRequest(...)` helper
+- `io.kestra.plugin.fastly.purge.Url` — purge a single URL (`POST /purge/{url}`)
+- `io.kestra.plugin.fastly.purge.Key` — purge a single surrogate key on a service (`POST /service/{id}/purge/{key}`)
+- `io.kestra.plugin.fastly.purge.Keys` — batch purge surrogate keys (`POST /service/{id}/purge` with JSON body)
+- `io.kestra.plugin.fastly.purge.All` — flush entire service cache (`POST /service/{id}/purge_all`, hard-purge only)
 
 ### Project Structure
 
 ```
 plugin-fastly/
 ├── src/main/java/io/kestra/plugin/fastly/
-├── src/test/java/io/kestra/plugin/fastly/
+│   ├── AbstractFastlyTask.java
+│   ├── package-info.java
+│   └── purge/
+│       ├── Url.java
+│       ├── Key.java
+│       ├── Keys.java
+│       ├── All.java
+│       └── package-info.java
+├── src/test/java/io/kestra/plugin/fastly/purge/
+│   ├── UrlTest.java
+│   ├── KeyTest.java
+│   ├── KeysTest.java
+│   └── AllTest.java
 ├── build.gradle
 └── README.md
 ```

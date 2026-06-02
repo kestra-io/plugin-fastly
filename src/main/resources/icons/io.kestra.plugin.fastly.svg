@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1389 1580">
+  <g fill="#FF282D">
+    <!-- stopwatch body: outer disc with the dial cut out (even-odd) -->
+    <path fill-rule="evenodd" d="M0,884 A694.5,694.5 0 1 0 1389,884 A694.5,694.5 0 1 0 0,884 Z M339,885 A356,356 0 1 0 1051,885 A356,356 0 1 0 339,885 Z"/>
+    <!-- crown button + neck -->
+    <rect x="525" y="0" width="340" height="92" rx="18"/>
+    <rect x="566" y="80" width="257" height="130"/>
+    <!-- dial tick marks -->
+    <rect x="673" y="525" width="44" height="38"/>
+    <rect x="673" y="1203" width="44" height="38"/>
+    <rect x="337" y="866" width="38" height="44"/>
+    <rect x="1015" y="866" width="38" height="44"/>
+    <!-- hand + hub -->
+    <polygon points="709,824 871,734 747,869"/>
+    <circle cx="695" cy="885" r="70"/>
+  </g>
+</svg>

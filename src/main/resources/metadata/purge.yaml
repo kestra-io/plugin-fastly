@@ -1,0 +1,8 @@
+group: io.kestra.plugin.fastly.purge
+name: "purge"
+title: "Fastly Cache Purge"
+description: "Tasks that invalidate Fastly cached content by URL, surrogate key, or globally for a service."
+body: "Invalidate cached content on Fastly's edge network. Supports URL purge, surrogate key purge (single and batch), and full service cache flush. Soft purge is available on all endpoints except purge-all."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
