@@ -43,6 +43,7 @@ public abstract class AbstractFastlyTask extends Task {
     )
     @NotNull
     @PluginProperty(group = "connection", secret = true)
+    @ToString.Exclude
     protected Property<String> apiToken;
 
     @Schema(
