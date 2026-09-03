@@ -4,7 +4,7 @@ Purge cached content and query historical analytics from Fastly CDN services in 
 
 ## Authentication
 
-All tasks require `apiToken` (your Fastly API token, required). The required token scope depends on the operation: `purge.Url`, `purge.Key`, and `purge.Keys` need `purge_select`; `purge.All` needs `purge_all`; stats tasks need `global:read`. Optionally set `baseUrl` (default `https://api.fastly.com`) and `options` for advanced HTTP settings. Store secrets in [secrets](https://kestra.io/docs/concepts/secret) and apply connection properties globally with [plugin defaults](https://kestra.io/docs/workflow-components/plugin-defaults).
+All tasks require `apiToken` (your Fastly API token, required). The required token scope depends on the operation: `purge.Url`, `purge.Key`, and `purge.Keys` need `purge_select`; `purge.All` needs `purge_all`; stats tasks need `global:read`. Optionally set `baseUrl` (default `https://api.fastly.com`) and `options` for advanced HTTP settings. Store secrets in [secrets](https://kestra.io/docs/concepts/secret) and set connection properties on each task.
 
 ## Tasks
 
